@@ -1,0 +1,65 @@
+THE PROMPT
+You are acting as a principal-level offensive security mentor building a pro-tier interview preparation reference for a senior/lead Application Security Engineer. The audience is an 8+ year offensive security practitioner (web/API/mobile/thick-client pentesting, cloud security, VDP/Bug Bounty program leadership, AI/LLM security) preparing for interviews that will test depth, not breadth. Assume the reader already knows OWASP Top 10 basics — skip beginner explanations and go straight to intermediate → advanced → pro-level tradecraft.
+Context of use: this content is for interview preparation and authorized lab practice (HackTheBox, CloudGoat, flaws.cloud, PwnedLabs, personal test environments) — not for use against systems without authorization. Frame every technique and PoC with that assumption; note the lab/target context (e.g., "on flaws.cloud level 3" or "against a CloudGoat 'iam_privesc_by_rollback' scenario") rather than implying live-target use.
+Output requirements (match my app's format):
+	•	Structure everything with clear headers so it can be dropped into tabbed/collapsible navigation.
+	•	Every technique needs: (1) a one-line conceptual summary, (2) the exploitation mechanics, (3) a concrete PoC (request/response, script, or command sequence), (4) the end-to-end chain it belongs to (what came before, what it enables next), (5) CVSS v3.1 vector + score, (6) remediation, (7) which framework it maps to (OWASP, MITRE ATLAS, OWASP Mobile Top 10 — whichever applies).
+	•	Where a PoC is a script, give it in full and runnable (Python preferred for cloud/API, Frida JS for mobile hooking, C#/PowerShell where thick-client-relevant) — not pseudocode.
+	•	Prefer multiple PoC variants per vulnerability class (e.g., 2-3 ways to achieve S3 bucket takeover) over one shallow example.
+	•	Close each major section with 3-5 interview-style questions I could be asked, with STAR-T or PACED-structured model answers referencing the PoCs above.
+Generate the following three modules. Go deep — this should read like an internal red-team playbook, not a training-wheels tutorial.
+
+
+MODULE 1 — AWS Cloud, Pro-Level Exploitation
+Cover, with full end-to-end chains and multiple PoCs each:
+	1.	S3 — public ACL/policy misconfig, presigned URL abuse, bucket takeover via dangling DNS/CNAME references, cross-account bucket policy abuse, versioning/logging bypass for cleanup.
+	2.	IAM privilege escalation — the full known escalation method catalog (iam:PassRole abuse, policy version rollback, CreatePolicyVersion abuse, attach-policy-to-self, confused deputy via Lambda/EC2 execution roles, assume-role trust policy abuse). For each: enumeration command, exploitation command, and what the resulting access looks like.
+	3.	EC2 / IMDS — SSRF → IMDSv1 credential theft chain end-to-end (vulnerable app → SSRF → instance metadata → temp creds → lateral movement), and how IMDSv2 mitigations get bypassed or misconfigured in the wild.
+	4.	Lambda — execution role over-permissioning, event-injection vulnerabilities, environment variable secret exposure, layer/package supply-chain risks, Lambda-to-Lambda privilege chains.
+	5.	API Gateway — resource policy gaps, custom/Lambda authorizer logic flaws, request validation bypass, stage variable exposure.
+	6.	SNS/SQS — cross-account subscription abuse, message injection, missing access policy restrictions leading to queue poisoning.
+	7.	One fully worked cross-service chain: public S3 (leaked config) → hardcoded keys → IAM enum → privesc → EC2 access → IMDS → Lambda pivot → data exfil via SNS. Write this as a single narrative attack path with a PoC command/script at every hop, as if presenting it live in an interview.
+Tools to reference throughout: Pacu (module names), Prowler/ScoutSuite (specific checks), AWS CLI raw commands, CloudGoat/flaws.cloud scenario mappings.
+
+
+MODULE 2 — Thick Client, Tool-by-Tool + Vulnerability Chains
+For each tool, give: what it's for, core workflow, and one worked example.
+	•	Echo Mirage (proxy injection into non-HTTP thick-client traffic)
+	•	dnSpy and dotPeek (.NET decompilation, live patching, breakpoint-based logic bypass)
+	•	CFF Explorer (PE header/import table analysis, spotting packed/protected binaries)
+	•	IDA Pro and Ghidra (static analysis workflow for unmanaged binaries — same target analyzed in both, noting where each tool's workflow differs)
+	•	Wireshark (protocol dissection for proprietary thick-client protocols, TLS-stripped traffic analysis)
+	•	Sysinternals (Procmon/Process Explorer/Process Monitor for runtime behavior — file/registry/network activity correlation)
+Then, vulnerability-class end-to-end chains (each with full PoC):
+	•	Hardcoded credentials/API keys recovered via decompilation → used against backend API.
+	•	Client-side authorization logic (role checks done in the client, not server) → bypass via patched binary or intercepted/modified traffic.
+	•	Insecure deserialization in a .NET or Java thick client → RCE chain.
+	•	DLL hijacking / DLL injection for privilege escalation on the local host.
+	•	License/entitlement bypass via patched conditional jumps (as a stand-in for broader "client trusts itself too much" logic flaws).
+	•	A full worked local privilege escalation chain: thick client running with elevated service privileges → insecure named pipe or IPC mechanism → unprivileged process abuses it → SYSTEM/root-level code execution. Full PoC code for the exploit.
+
+MODULE 3 — Mobile, Android + iOS, Deep Concepts + PoCs
+Android:
+	•	ADB workflows for pentesting (backup extraction, intent fuzzing, log inspection).
+	•	APK reversing pipeline (decompile → analyze → repackage → resign), with a worked example of patching a check (e.g., root detection or SSL pinning) out of an APK.
+	•	Intent hijacking / exported component abuse (activities, services, broadcast receivers, content providers) with a PoC malicious intent.
+	•	WebView vulnerabilities (JS bridge abuse, insecure loadUrl handling, file scheme access).
+	•	Certificate pinning bypass — Frida script for common pinning implementations (OkHttp, TrustManager overrides), plus Objection one-liners.
+	•	Insecure local storage (SharedPreferences, SQLite, keystore misuse) — extraction PoC.
+iOS:
+	•	IPA analysis pipeline (decrypt, unzip, inspect Info.plist/entitlements/binary).
+	•	Keychain exposure and misconfigured kSecAttrAccessible levels — extraction PoC on a jailbroken/simulated device.
+	•	Runtime hooking with Frida (Objective-C method swizzling for logic bypass) — worked example against a sample auth check.
+	•	Certificate pinning bypass for iOS-specific implementations (NSURLSession delegate overrides).
+	•	Insecure IPC (custom URL schemes / universal links) — hijack PoC.
+Cross-platform:
+	•	One full end-to-end mobile chain: insecure API called by the app (no cert pinning) → intercepted via Frida/Burp → auth token extracted → replayed against backend → privilege escalation on the server side. Full PoC at every hop, tools named at each step (Frida, Objection, MobSF, Burp).
+Tools to reference throughout: Frida, Objection, MobSF, apktool/jadx, OWASP Mobile Top 10 mapping for every vulnerability class covered.
+
+
+
+
+
+
+
+
